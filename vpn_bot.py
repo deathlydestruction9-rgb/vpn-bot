@@ -230,26 +230,26 @@ async def add_device_callback(callback: types.CallbackQuery):
 
 @dp.message(Command("plans"))
 async def cmd_plans(message: types.Message):
-    plans_text = """💎 **Тарифные планы**
+    plans_text = """💎 Тарифные планы
 
-📦 **Базовый** - 200₽/месяц
+📦 Базовый - 200₽/месяц
 • 1 устройство
 • 50 GB трафика
 • Германия 🇩🇪
 
-📦 **Стандарт** - 350₽/месяц
+📦 Стандарт - 350₽/месяц
 • 3 устройства
 • 150 GB трафика
 • Германия 🇩🇪
 
-📦 **Премиум** - 500₽/месяц
+📦 Премиум - 500₽/месяц
 • 5 устройств
 • Безлимитный трафик
 • Германия 🇩🇪
 
 Для покупки напишите @your_username"""
     
-    await message.answer(plans_text, parse_mode="Markdown")
+    await message.answer(plans_text)
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
