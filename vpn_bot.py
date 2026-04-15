@@ -185,9 +185,32 @@ def create_key_page(short_link, vless_link):
     return f"http://{XRAY_SERVER}/keys/{short_link}.html"
 
 def add_config_to_xray(config_id):
-    """Добавляет конфиг в Xray (нужно будет реализовать через API или файл)"""
-    # TODO: Интеграция с Xray для добавления UUID в конфиг
-    pass
+    """Добавляет конфиг в Xray"""
+    import json
+    try:
+        # Читаем текущий конфиг
+        with open('/usr/local/etc/xray/config.json', 'r') as f:
+            xray_config = json.load(f)
+        
+        # Проверяем есть ли уже этот UUID
+        existing_ids = [client['id'] for client in xray_config['inbounds'][0]['settings']['clients']]
+        if config_id not in existing_ids:
+            # Добавляем новый UUID
+            xray_config['inbounds'][0]['settings']['clients'].append({
+                "id": config_id,
+                "flow": "xtls-rprx-vision"
+            })
+            
+            # Сохраняем конфиг
+            with open('/usr/local/etc/xray/config.json', 'w') as f:
+                json.dump(xray_config, f, indent=2)
+            
+            # Перезапускаем Xray
+            import subprocess
+            subprocess.run(['systemctl', 'restart', 'xray'], check=True)
+            logging.info(f"✅ UUID {config_id} добавлен в Xray")
+    except Exception as e:
+        logging.error(f"❌ Ошибка добавления UUID в Xray: {e}")
 
 # --- КОМАНДЫ ---
 @dp.message(Command("start"))
@@ -209,19 +232,35 @@ async def cmd_start(message: types.Message):
         with sqlite3.connect(DB_NAME) as conn:
             conn.execute("""INSERT INTO configs (user_id, config_id, device_name, short_link, created_at) 
                             VALUES (?, ?, ?, ?, ?)""", 
-                         (user_id, config_id, "Free", short_link, int(time.time())))
+                         (user_id, config_id, "Подписка", short_link, int(time.time())))
             # Устанавливаем лимит 50GB для бесплатного
             conn.execute("UPDATE users SET traffic_limit_gb = 50 WHERE user_id = ?", (user_id,))
         
-        vless_link = create_vless_link(config_id, "Germany")
+        # Добавляем UUID в Xray
+        add_config_to_xray(config_id)
+        
+        vless_link = create_vless_link(config_id, "Subscription")
+        
+        # Создаём subscription URL
+        import base64
+        sub_content = base64.b64encode(vless_link.encode()).decode()
+        sub_url = f"http://{XRAY_SERVER}/sub/{short_link}"
+        
+        # Сохраняем subscription файл
+        import os
+        os.makedirs('/var/www/html/sub', exist_ok=True)
+        with open(f'/var/www/html/sub/{short_link}', 'w') as f:
+            f.write(vless_link)
         
         welcome_text = f"""🎉 Спасибо за подписку!
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-Вот ваш ключ:
+Вот ваша подписка (нажмите чтобы скопировать):
 
-<code>{vless_link}</code>
+<code>{sub_url}</code>
+
+📊 Трафик: 0 GB / 50 GB
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
 
@@ -267,17 +306,32 @@ async def cmd_profile(message: types.Message):
 @dp.message(Command("keys"))
 async def cmd_keys(message: types.Message):
     user_id = message.from_user.id
+    user = get_user(user_id)
     configs = get_user_configs(user_id)
     
     if not configs:
         await message.answer("❌ У вас нет ключей. Используйте /start")
         return
     
+    traffic_limit = user[4]
+    traffic_used = user[5]
+    
     for idx, config in enumerate(configs, 1):
-        device_name = config[3]
-        vless_link = create_vless_link(config[2], device_name)
+        short_link = config[4]
+        sub_url = f"http://{XRAY_SERVER}/sub/{short_link}"
         
-        text = f"🔑 Ключ #{idx} - {device_name}\n\n<code>{vless_link}</code>"
+        if traffic_limit == 0:
+            traffic_info = "📊 Трафик: Безлимит ♾️"
+        else:
+            remaining = traffic_limit - traffic_used
+            traffic_info = f"📊 Трафик: {traffic_used:.1f} GB / {traffic_limit} GB (осталось {remaining:.1f} GB)"
+        
+        text = f"""🔑 Подписка #{idx}
+
+{traffic_info}
+
+Ссылка на подписку:
+<code>{sub_url}</code>"""
         
         await message.answer(text, parse_mode="HTML")
 
