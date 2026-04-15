@@ -184,16 +184,21 @@ async def cmd_keys(message: types.Message):
         await message.answer("❌ У вас нет ключей. Используйте /start")
         return
     
-    text = f"🔑 Ваши ключи ({len(configs)}):\n\n"
     for idx, config in enumerate(configs, 1):
         device_name = config[3]
         short_link = config[4]
         vless_link = create_vless_link(config[2], device_name)
-        text += f"{idx}. {device_name}\n"
-        text += f"Код: `{short_link}`\n"
-        text += f"```\n{vless_link}\n```\n\n"
-    
-    await message.answer(text, parse_mode="Markdown")
+        
+        text = f"""🔑 Ключ #{idx} - {device_name}
+
+Короткий код: {short_link}
+
+Ссылка для подключения:
+{vless_link}
+
+Скопируйте ссылку и импортируйте в v2rayN/Hiddify/v2rayNG"""
+        
+        await message.answer(text)
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: types.Message):
