@@ -80,8 +80,8 @@ def get_user_configs(user_id):
         return conn.execute("SELECT * FROM configs WHERE user_id = ?", (user_id,)).fetchall()
 
 def generate_short_link():
-    """Генерирует короткую ссылку (6 символов)"""
-    return secrets.token_urlsafe(6)[:6]
+    """Генерирует короткую ссылку (8 символов)"""
+    return secrets.token_urlsafe(8).replace('-', '').replace('_', '')[:8]
 
 def create_vless_link(config_id, device_name):
     """Создаёт VLESS ссылку для конфига"""
@@ -93,6 +93,96 @@ def create_vless_link(config_id, device_name):
         f"#🇩🇪_{device_name}"
     )
     return link
+
+def create_key_page(short_link, vless_link):
+    """Создаёт HTML страницу для ключа"""
+    html_template = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Key</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; text-align: center; }
+        .key-box {
+            background: #f7f7f7;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn:hover { background: #764ba2; }
+        .success {
+            display: none;
+            color: #28a745;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Your VPN Key</h1>
+        <div class="key-box" id="vlessKey">VLESS_LINK</div>
+        <button class="btn" onclick="copyKey()">📋 Copy Key</button>
+        <div class="success" id="successMsg">✅ Copied to clipboard!</div>
+    </div>
+    <script>
+        function copyKey() {
+            const key = document.getElementById('vlessKey').textContent;
+            navigator.clipboard.writeText(key).then(() => {
+                document.getElementById('successMsg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('successMsg').style.display = 'none';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>"""
+    
+    html_content = html_template.replace('VLESS_LINK', vless_link)
+    
+    # Сохраняем HTML файл
+    import os
+    os.makedirs('/var/www/html/keys', exist_ok=True)
+    with open(f'/var/www/html/keys/{short_link}.html', 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    
+    return f"http://{XRAY_SERVER}/keys/{short_link}.html"
 
 def add_config_to_xray(config_id):
     """Добавляет конфиг в Xray (нужно будет реализовать через API или файл)"""
@@ -124,17 +214,13 @@ async def cmd_start(message: types.Message):
             conn.execute("UPDATE users SET traffic_limit_gb = 50 WHERE user_id = ?", (user_id,))
         
         vless_link = create_vless_link(config_id, "Germany")
+        key_url = create_key_page(short_link, vless_link)
         
         welcome_text = f"""🎉 Спасибо за подписку!
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-Вот ваш ключ: `{short_link}` (нажмите на ключ, чтобы скопировать)
-
-**Ссылка для подключения:**
-```
-{vless_link}
-```
+Вот ваш ключ: {key_url} (нажмите на ключ, чтобы скопировать)
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
 
@@ -188,15 +274,13 @@ async def cmd_keys(message: types.Message):
         device_name = config[3]
         short_link = config[4]
         vless_link = create_vless_link(config[2], device_name)
+        key_url = create_key_page(short_link, vless_link)
         
         text = f"""🔑 Ключ #{idx} - {device_name}
 
-Короткий код: {short_link}
+Ваш ключ: {key_url}
 
-Ссылка для подключения:
-{vless_link}
-
-Скопируйте ссылку и импортируйте в v2rayN/Hiddify/v2rayNG"""
+Нажмите на ссылку, чтобы скопировать ключ для подключения"""
         
         await message.answer(text)
 
