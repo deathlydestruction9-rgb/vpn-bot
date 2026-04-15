@@ -219,9 +219,11 @@ async def cmd_start(message: types.Message):
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-Вот ваш ключ (нажмите чтобы скопировать):
+Вот ваш ключ:
 
+```
 {vless_link}
+```
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
 
@@ -229,7 +231,7 @@ async def cmd_start(message: types.Message):
 
 ✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
         
-        await message.answer(welcome_text)
+        await message.answer(welcome_text, parse_mode="Markdown")
     else:
         welcome_text = """🔐 SecureCrypt VPN
 
@@ -277,16 +279,9 @@ async def cmd_keys(message: types.Message):
         device_name = config[3]
         vless_link = create_vless_link(config[2], device_name)
         
-        text = f"🔑 Ключ #{idx} - {device_name}\n\nНажмите кнопку ниже чтобы скопировать ключ:"
+        text = f"🔑 Ключ #{idx} - {device_name}\n\n```\n{vless_link}\n```"
         
-        # Создаём inline кнопку для копирования
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📋 Скопировать ключ", url=f"https://t.me/share/url?url={vless_link}")]
-        ])
-        
-        await message.answer(text, reply_markup=keyboard)
-        # Отправляем ключ отдельным сообщением в моноширинном формате
-        await message.answer(f"```\n{vless_link}\n```", parse_mode="Markdown")
+        await message.answer(text, parse_mode="Markdown")
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: types.Message):
