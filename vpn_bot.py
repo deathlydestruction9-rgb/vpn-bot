@@ -17,6 +17,7 @@ ADMIN_IDS = [7582399898]  # Твой Telegram ID (замени на свой)
 
 # Xray конфигурация
 XRAY_SERVER = "166.88.225.226"
+XRAY_DOMAIN = "ultimatedyn.ru"  # Домен для subscription
 XRAY_PORT = 443
 XRAY_PRIVATE_KEY = "0I3YI0bIh2IUYU6MMFmyLSKtliFS9DHJTaG5mtEm_lM"
 XRAY_PUBLIC_KEY = "oHbn7gICu11DjtzrELGSAVEvyX6S3SznoOPvtkH6fm0"
@@ -244,7 +245,7 @@ async def cmd_start(message: types.Message):
         # Создаём subscription URL
         import base64
         sub_content = base64.b64encode(vless_link.encode()).decode()
-        sub_url = f"http://{XRAY_SERVER}/sub/{short_link}"
+        sub_url = f"http://{XRAY_DOMAIN}/sub/{short_link}"
         
         # Сохраняем subscription файл
         import os
@@ -315,7 +316,7 @@ async def cmd_keys(message: types.Message):
     
     for idx, config in enumerate(configs, 1):
         short_link = config[4]
-        sub_url = f"http://{XRAY_SERVER}/sub/{short_link}"
+        sub_url = f"http://{XRAY_DOMAIN}/sub/{short_link}"
         
         if traffic_limit == 0:
             traffic_info = "📊 Трафик: Безлимит ♾️"
