@@ -277,13 +277,16 @@ async def cmd_keys(message: types.Message):
         device_name = config[3]
         vless_link = create_vless_link(config[2], device_name)
         
-        text = f"""🔑 Ключ #{idx} - {device_name}
-
-Нажмите на ключ чтобы скопировать:
-
-{vless_link}"""
+        text = f"🔑 Ключ #{idx} - {device_name}\n\nНажмите кнопку ниже чтобы скопировать ключ:"
         
-        await message.answer(text)
+        # Создаём inline кнопку для копирования
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 Скопировать ключ", url=f"https://t.me/share/url?url={vless_link}")]
+        ])
+        
+        await message.answer(text, reply_markup=keyboard)
+        # Отправляем ключ отдельным сообщением в моноширинном формате
+        await message.answer(f"```\n{vless_link}\n```", parse_mode="Markdown")
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: types.Message):
