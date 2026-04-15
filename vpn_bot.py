@@ -400,9 +400,9 @@ async def main():
         
         await bot.set_my_commands([
             BotCommand(command='start', description='🚀 Начать'),
+            BotCommand(command='keys', description='🔑 Мои ключи'),
             BotCommand(command='profile', description='👤 Мой профиль'),
-            BotCommand(command='devices', description='📱 Устройства'),
-            BotCommand(command='plans', description='💎 Тарифы'),
+            BotCommand(command='premium', description='💎 Премиум'),
             BotCommand(command='help', description='❓ Помощь')
         ])
         logger.info("✅ Команды бота установлены")
