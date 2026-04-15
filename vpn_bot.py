@@ -256,10 +256,6 @@ async def cmd_start(message: types.Message):
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-Вот ваша подписка (нажмите чтобы скопировать):
-
-<code>{sub_url}</code>
-
 📊 Трафик: 0 GB / 50 GB
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
@@ -268,7 +264,8 @@ async def cmd_start(message: types.Message):
 
 ✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
         
-        await message.answer(welcome_text, parse_mode="HTML")
+        await message.answer(welcome_text)
+        await message.answer(f"Вот ваша подписка:\n\n<code>{sub_url}</code>", parse_mode="HTML")
     else:
         welcome_text = """🔐 SecureCrypt VPN
 
