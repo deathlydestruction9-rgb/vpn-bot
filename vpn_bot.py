@@ -106,20 +106,49 @@ async def cmd_start(message: types.Message):
     username = message.from_user.username or "Unknown"
     
     create_user(user_id, username)
-    user = get_user(user_id)
     
-    welcome_text = """🔐 **SecureCrypt VPN**
+    # Создаём бесплатный ключ автоматически
+    configs = get_user_configs(user_id)
+    
+    if not configs:
+        # Генерируем первый бесплатный ключ
+        import uuid
+        config_id = str(uuid.uuid4())
+        short_link = generate_short_link()
+        
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("""INSERT INTO configs (user_id, config_id, device_name, short_link, created_at) 
+                            VALUES (?, ?, ?, ?, ?)""", 
+                         (user_id, config_id, "Free", short_link, int(time.time())))
+            # Устанавливаем лимит 50GB для бесплатного
+            conn.execute("UPDATE users SET traffic_limit_gb = 50 WHERE user_id = ?", (user_id,))
+        
+        vless_link = create_vless_link(config_id, "Germany")
+        
+        welcome_text = f"""🎉 Спасибо за подписку!
 
-Добро пожаловать в безопасный VPN сервис!
+Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-🌍 Локация: Германия 🇩🇪
-⚡ Скорость: до 100 Mbit/s
-🔒 Протокол: VLESS + Reality
+Вот ваш ключ: `{short_link}` (нажмите на ключ, чтобы скопировать)
 
-**Команды:**
-/profile - Мой профиль
-/devices - Управление устройствами
-/plans - Тарифные планы
+**Ссылка для подключения:**
+```
+{vless_link}
+```
+
+👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
+
+На бесплатных серверах скорость может сильно ухудшаться от высокой нагрузки, а также трафик ограничен до 50 гигабайт в месяц
+
+✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
+    else:
+        welcome_text = """🔐 SecureCrypt VPN
+
+Добро пожаловать обратно!
+
+Используйте команды:
+/keys - Мои ключи
+/premium - Премиум подписка
 /help - Помощь"""
     
     await message.answer(welcome_text, parse_mode="Markdown")
@@ -134,142 +163,71 @@ async def cmd_profile(message: types.Message):
         return
     
     configs = get_user_configs(user_id)
-    subscription_until = user[2]
-    device_limit = user[3]
     traffic_limit = user[4]
     traffic_used = user[5]
     
-    if subscription_until > time.time():
-        sub_date = datetime.fromtimestamp(subscription_until).strftime("%d.%m.%Y")
-        status = f"✅ Активна до {sub_date}"
-    else:
-        status = "❌ Не активна"
+    profile_text = f"""👤 Ваш профиль
+
+📱 Ключей: {len(configs)}
+📊 Трафик: {traffic_used:.2f} GB / {"∞" if traffic_limit == 0 else f"{traffic_limit} GB"}
+
+Используй /keys для просмотра ключей"""
     
-    profile_text = f"""👤 **Ваш профиль**
+    await message.answer(profile_text)
 
-📊 Подписка: {status}
-📱 Устройств: {len(configs)}/{device_limit}
-📊 Трафик: {traffic_used:.2f} GB / {traffic_limit} GB
-
-Используй /devices для управления устройствами"""
-    
-    await message.answer(profile_text, parse_mode="Markdown")
-
-@dp.message(Command("devices"))
-async def cmd_devices(message: types.Message):
+@dp.message(Command("keys"))
+async def cmd_keys(message: types.Message):
     user_id = message.from_user.id
-    user = get_user(user_id)
-    
-    if not user:
-        await message.answer("❌ Пользователь не найден. Используй /start")
-        return
-    
     configs = get_user_configs(user_id)
-    device_limit = user[3]
     
     if not configs:
-        text = "📱 У вас пока нет устройств.\n\nИспользуйте кнопку ниже для добавления."
-    else:
-        text = f"📱 **Ваши устройства ({len(configs)}/{device_limit}):**\n\n"
-        for idx, config in enumerate(configs, 1):
-            device_name = config[3]
-            short_link = config[4]
-            text += f"{idx}. {device_name} - `{short_link}`\n"
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Добавить устройство", callback_data="add_device")],
-        [InlineKeyboardButton(text="🗑 Удалить устройство", callback_data="remove_device")]
-    ])
-    
-    await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
-
-@dp.callback_query(F.data == "add_device")
-async def add_device_callback(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    user = get_user(user_id)
-    configs = get_user_configs(user_id)
-    device_limit = user[3]
-    
-    if len(configs) >= device_limit:
-        await callback.answer("❌ Достигнут лимит устройств!", show_alert=True)
+        await message.answer("❌ У вас нет ключей. Используйте /start")
         return
     
-    # Генерируем новый конфиг
-    import uuid
-    config_id = str(uuid.uuid4())
-    device_name = f"Device_{len(configs) + 1}"
-    short_link = generate_short_link()
+    text = f"🔑 Ваши ключи ({len(configs)}):\n\n"
+    for idx, config in enumerate(configs, 1):
+        device_name = config[3]
+        short_link = config[4]
+        vless_link = create_vless_link(config[2], device_name)
+        text += f"{idx}. {device_name}\n"
+        text += f"Код: `{short_link}`\n"
+        text += f"```\n{vless_link}\n```\n\n"
     
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("""INSERT INTO configs (user_id, config_id, device_name, short_link, created_at) 
-                        VALUES (?, ?, ?, ?, ?)""", 
-                     (user_id, config_id, device_name, short_link, int(time.time())))
-    
-    # Создаём VLESS ссылку
-    vless_link = create_vless_link(config_id, device_name)
-    
-    text = f"""✅ **Устройство добавлено!**
+    await message.answer(text, parse_mode="Markdown")
 
-📱 Название: {device_name}
-🔗 Короткая ссылка: `{short_link}`
+@dp.message(Command("premium"))
+async def cmd_premium(message: types.Message):
+    premium_text = """💎 Премиум подписка
 
-**Ссылка для подключения:**
-```
-{vless_link}
-```
+🚀 Безлимитный трафик
+⚡ Максимальная скорость
+🌍 Германия 🇩🇪
+📱 До 5 устройств
 
-**Как подключиться:**
-1. Скопируй ссылку выше
-2. Открой v2rayN/Hiddify/v2rayNG
-3. Импортируй из буфера обмена
-
-Или используй короткую ссылку: https://t.me/SecureCrypt_bot?start={short_link}"""
-    
-    await callback.message.answer(text, parse_mode="Markdown")
-    await callback.answer()
-
-@dp.message(Command("plans"))
-async def cmd_plans(message: types.Message):
-    plans_text = """💎 Тарифные планы
-
-📦 Базовый - 200₽/месяц
-• 1 устройство
-• 50 GB трафика
-• Германия 🇩🇪
-
-📦 Стандарт - 350₽/месяц
-• 3 устройства
-• 150 GB трафика
-• Германия 🇩🇪
-
-📦 Премиум - 500₽/месяц
-• 5 устройств
-• Безлимитный трафик
-• Германия 🇩🇪
+💰 Цена: 300₽/месяц
 
 Для покупки напишите @your_username"""
     
-    await message.answer(plans_text)
+    await message.answer(premium_text)
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
-    help_text = """❓ **Помощь**
+    help_text = """❓ Помощь
 
-**Основные команды:**
-/start - Начать работу
+Основные команды:
+/start - Получить бесплатный ключ
+/keys - Мои ключи
 /profile - Мой профиль
-/devices - Управление устройствами
-/plans - Тарифные планы
+/premium - Премиум подписка
 
-**Как подключиться:**
-1. Купите подписку (/plans)
-2. Добавьте устройство (/devices)
-3. Скопируйте ссылку
-4. Импортируйте в v2rayN/Hiddify
+Как подключиться:
+1. Скопируйте ключ из /keys
+2. Откройте v2rayN/Hiddify/v2rayNG
+3. Импортируйте из буфера обмена
 
-**Поддержка:** @your_username"""
+Поддержка: @your_username"""
     
-    await message.answer(help_text, parse_mode="Markdown")
+    await message.answer(help_text)
 
 # --- АДМИН КОМАНДЫ ---
 @dp.message(Command("admin"))
