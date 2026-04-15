@@ -221,7 +221,7 @@ async def cmd_start(message: types.Message):
 
 Вот ваш ключ (нажмите чтобы скопировать):
 
-`{vless_link}`
+{vless_link}
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
 
@@ -229,7 +229,7 @@ async def cmd_start(message: types.Message):
 
 ✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
         
-        await message.answer(welcome_text, parse_mode="Markdown")
+        await message.answer(welcome_text)
     else:
         welcome_text = """🔐 SecureCrypt VPN
 
@@ -281,9 +281,9 @@ async def cmd_keys(message: types.Message):
 
 Нажмите на ключ чтобы скопировать:
 
-`{vless_link}`"""
+{vless_link}"""
         
-        await message.answer(text, parse_mode="Markdown")
+        await message.answer(text)
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: types.Message):
