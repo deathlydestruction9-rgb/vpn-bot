@@ -326,12 +326,7 @@ async def cmd_keys(message: types.Message):
             remaining = traffic_limit - traffic_used
             traffic_info = f"📊 Трафик: {traffic_used:.1f} GB / {traffic_limit} GB (осталось {remaining:.1f} GB)"
         
-        text = f"""🔑 Подписка #{idx}
-
-{traffic_info}
-
-Ссылка на подписку:
-<code>{sub_url}</code>"""
+        text = f"🔑 Подписка #{idx}\n\n{traffic_info}\n\nСсылка на подписку:\n<code>{sub_url}</code>"
         
         await message.answer(text, parse_mode="HTML")
 
