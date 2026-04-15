@@ -257,16 +257,22 @@ async def cmd_start(message: types.Message):
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
+Ваша подписка:
+<code>{sub_url}</code>
+
 📊 Трафик: 0 GB / 50 GB
 
-👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
+📱 Инструкция по установке:
+1. Скопируйте ссылку выше
+2. Откройте v2rayN/Hiddify/v2rayNG
+3. Добавьте подписку → Вставьте ссылку
+4. Обновите подписку
 
 На бесплатных серверах скорость может сильно ухудшаться от высокой нагрузки, а также трафик ограничен до 50 гигабайт в месяц
 
 ✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
         
-        await message.answer(welcome_text)
-        await message.answer(f"Вот ваша подписка:\n\n<code>{sub_url}</code>", parse_mode="HTML")
+        await message.answer(welcome_text, parse_mode="HTML")
     else:
         welcome_text = """🔐 SecureCrypt VPN
 
@@ -276,8 +282,8 @@ async def cmd_start(message: types.Message):
 /keys - Мои ключи
 /premium - Премиум подписка
 /help - Помощь"""
-    
-    await message.answer(welcome_text, parse_mode="Markdown")
+        
+        await message.answer(welcome_text)
 
 @dp.message(Command("profile"))
 async def cmd_profile(message: types.Message):
