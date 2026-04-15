@@ -214,19 +214,22 @@ async def cmd_start(message: types.Message):
             conn.execute("UPDATE users SET traffic_limit_gb = 50 WHERE user_id = ?", (user_id,))
         
         vless_link = create_vless_link(config_id, "Germany")
-        key_url = create_key_page(short_link, vless_link)
         
         welcome_text = f"""🎉 Спасибо за подписку!
 
 Советуем не отписываться от канала, ведь там будут публиковаться различные новости о данном впн, включая уведомления о работе сервиса, анонсы и прочие обновления проекта :3
 
-Вот ваш ключ: {key_url} (нажмите на ключ, чтобы скопировать)
+Вот ваш ключ (нажмите чтобы скопировать):
+
+`{vless_link}`
 
 👉 Инструкция по установке: https://telegra.ph/VPN-Setup-Guide-04-15
 
 На бесплатных серверах скорость может сильно ухудшаться от высокой нагрузки, а также трафик ограничен до 50 гигабайт в месяц
 
 ✅ Если вы хотите пользоваться сервисом без ограничений, то рекомендуем вам приобрести платный ключ в главном меню бота!"""
+        
+        await message.answer(welcome_text, parse_mode="Markdown")
     else:
         welcome_text = """🔐 SecureCrypt VPN
 
@@ -272,17 +275,15 @@ async def cmd_keys(message: types.Message):
     
     for idx, config in enumerate(configs, 1):
         device_name = config[3]
-        short_link = config[4]
         vless_link = create_vless_link(config[2], device_name)
-        key_url = create_key_page(short_link, vless_link)
         
         text = f"""🔑 Ключ #{idx} - {device_name}
 
-Ваш ключ: {key_url}
+Нажмите на ключ чтобы скопировать:
 
-Нажмите на ссылку, чтобы скопировать ключ для подключения"""
+`{vless_link}`"""
         
-        await message.answer(text)
+        await message.answer(text, parse_mode="Markdown")
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: types.Message):
